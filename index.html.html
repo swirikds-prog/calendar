@@ -1,0 +1,1167 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>선생님 일정 달력</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f5f2ed;
+    --surface: #ffffff;
+    --surface2: #f0ece4;
+    --border: #ddd8cf;
+    --text: #2c2416;
+    --text-muted: #8a7f70;
+    --accent: #c4622d;
+    --accent-light: #f5e4d8;
+    --accent2: #3a6b52;
+    --accent2-light: #dceee5;
+    --blue: #2f5597;
+    --blue-light: #dce6f1;
+    --gold: #b8860b;
+    --gold-light: #fdf3d0;
+    --danger: #a83240;
+    --danger-light: #f8dde0;
+    --shadow: 0 2px 12px rgba(44,36,22,0.08);
+    --shadow-lg: 0 8px 32px rgba(44,36,22,0.14);
+    --radius: 12px;
+    --radius-sm: 6px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Noto Sans KR', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+
+  /* ── HEADER ── */
+  header {
+    background: var(--text);
+    color: #fff;
+    padding: 0 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 60px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 2px 16px rgba(0,0,0,0.2);
+  }
+  .header-title {
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.35rem;
+    letter-spacing: 0.01em;
+    color: #fff;
+  }
+  .header-title span { color: #e8a87c; }
+  .header-actions { display: flex; gap: 8px; align-items: center; }
+
+  /* ── TABS ── */
+  .tab-bar {
+    display: flex;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0 24px;
+    gap: 4px;
+    position: sticky;
+    top: 60px;
+    z-index: 90;
+  }
+  .tab-btn {
+    padding: 14px 20px;
+    border: none;
+    background: none;
+    font-family: 'Noto Sans KR', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+    letter-spacing: 0.02em;
+  }
+  .tab-btn.active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+  }
+  .tab-btn:hover { color: var(--text); }
+
+  /* ── LAYOUT ── */
+  .main { display: flex; height: calc(100vh - 109px); overflow: hidden; }
+  .calendar-section { flex: 1; overflow-y: auto; padding: 20px; }
+  .sidebar {
+    width: 300px;
+    background: var(--surface);
+    border-left: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* ── NAV BAR ── */
+  .nav-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+    padding: 14px 18px;
+    background: var(--surface);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+  }
+  .nav-bar h2 {
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.5rem;
+    color: var(--text);
+  }
+  .nav-btn {
+    background: none;
+    border: 1px solid var(--border);
+    width: 34px; height: 34px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 1rem;
+    color: var(--text-muted);
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.15s;
+  }
+  .nav-btn:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .today-btn {
+    padding: 6px 14px;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 20px;
+    font-size: 0.78rem;
+    font-weight: 500;
+    cursor: pointer;
+    letter-spacing: 0.03em;
+    font-family: 'Noto Sans KR', sans-serif;
+    transition: opacity 0.2s;
+  }
+  .today-btn:hover { opacity: 0.85; }
+
+  /* ── MONTH VIEW ── */
+  .month-grid { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+  .weekday-header {
+    display: grid; grid-template-columns: repeat(7,1fr);
+    background: var(--text);
+  }
+  .weekday-header div {
+    text-align: center; padding: 10px 0;
+    font-size: 0.73rem; font-weight: 500;
+    color: rgba(255,255,255,0.7);
+    letter-spacing: 0.06em;
+  }
+  .weekday-header div:first-child { color: #f28b82; }
+  .weekday-header div:last-child { color: #93c5fd; }
+  .days-grid { display: grid; grid-template-columns: repeat(7,1fr); }
+  .day-cell {
+    min-height: 96px;
+    border-right: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    padding: 6px;
+    cursor: pointer;
+    transition: background 0.15s;
+    position: relative;
+  }
+  .day-cell:nth-child(7n) { border-right: none; }
+  .day-cell:hover { background: var(--accent-light); }
+  .day-cell.other-month .day-num { color: #ccc; }
+  .day-cell.other-month { background: #fafaf8; }
+  .day-cell.today { background: #fff8f4; }
+  .day-cell.today .day-num {
+    background: var(--accent);
+    color: #fff;
+    border-radius: 50%;
+    width: 26px; height: 26px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .day-cell.selected { background: var(--accent-light); }
+  .day-cell.holiday { background: #fff5f5; }
+  .day-num {
+    font-size: 0.82rem; font-weight: 500;
+    width: 26px; height: 26px;
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 2px;
+  }
+  .day-cell:nth-child(7n+1) .day-num { color: var(--danger); }
+  .day-cell:nth-child(7n) .day-num { color: var(--blue); }
+  .holiday-label {
+    font-size: 0.63rem; color: var(--danger); font-weight: 500;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    margin-bottom: 2px;
+  }
+  .event-chip {
+    font-size: 0.68rem;
+    padding: 2px 6px;
+    border-radius: 10px;
+    margin-bottom: 2px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    cursor: pointer;
+    line-height: 1.5;
+  }
+  .event-chip.cat-general { background: var(--blue-light); color: var(--blue); }
+  .event-chip.cat-class { background: var(--accent-light); color: var(--accent); }
+  .event-chip.cat-meeting { background: var(--gold-light); color: var(--gold); }
+  .event-chip.cat-holiday-ev { background: var(--danger-light); color: var(--danger); }
+  .event-chip.cat-other { background: var(--accent2-light); color: var(--accent2); }
+  .event-chip.done { opacity: 0.45; text-decoration: line-through; }
+  .more-chip { font-size: 0.63rem; color: var(--text-muted); padding: 1px 4px; }
+
+  /* ── WEEK VIEW ── */
+  .week-view { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+  .week-header { display: grid; grid-template-columns: 60px repeat(7,1fr); background: var(--text); }
+  .week-header div {
+    text-align: center; padding: 10px 4px;
+    font-size: 0.75rem; color: rgba(255,255,255,0.75);
+  }
+  .week-header .wh-day { font-size: 1rem; font-weight: 500; display: block; color: #fff; }
+  .week-header .wh-day.today-wd { color: var(--accent); }
+  .week-body { display: grid; grid-template-columns: 60px repeat(7,1fr); }
+  .time-col { display: flex; flex-direction: column; }
+  .time-slot {
+    height: 52px; font-size: 0.68rem; color: var(--text-muted);
+    text-align: right; padding-right: 8px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: flex-end;
+  }
+  .week-day-col {
+    border-left: 1px solid var(--border);
+    display: flex; flex-direction: column;
+  }
+  .week-slot {
+    height: 52px; border-bottom: 1px solid var(--border);
+    padding: 2px 3px; position: relative;
+  }
+  .week-slot:hover { background: var(--accent-light); }
+  .week-event {
+    font-size: 0.68rem; padding: 2px 5px; border-radius: 4px;
+    margin-bottom: 1px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+  }
+
+  /* ── DAY VIEW ── */
+  .day-view { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+  .day-view-header {
+    padding: 18px 20px;
+    border-bottom: 1px solid var(--border);
+    background: linear-gradient(135deg, var(--text) 0%, #4a3c28 100%);
+  }
+  .day-view-header h3 { font-family: 'DM Serif Display', serif; font-size: 1.6rem; color: #fff; }
+  .day-view-header p { font-size: 0.8rem; color: rgba(255,255,255,0.6); margin-top: 2px; }
+  .day-timeline { display: flex; flex-direction: column; }
+  .day-time-row {
+    display: grid; grid-template-columns: 70px 1fr;
+    border-bottom: 1px solid var(--border);
+    min-height: 56px;
+  }
+  .day-time-label {
+    font-size: 0.72rem; color: var(--text-muted);
+    padding: 8px 12px 8px 16px; text-align: right;
+    border-right: 1px solid var(--border);
+    line-height: 40px;
+  }
+  .day-slot { padding: 4px 12px; }
+  .day-event {
+    padding: 6px 10px; border-radius: 6px; margin-bottom: 4px;
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 8px;
+  }
+  .day-event-info { flex: 1; min-width: 0; }
+  .day-event-title { font-size: 0.85rem; font-weight: 500; }
+  .day-event-time { font-size: 0.72rem; opacity: 0.7; margin-top: 1px; }
+  .all-day-section {
+    padding: 10px 16px;
+    border-bottom: 2px solid var(--border);
+    background: var(--surface2);
+  }
+  .all-day-section h4 { font-size: 0.72rem; color: var(--text-muted); margin-bottom: 6px; letter-spacing: 0.05em; }
+
+  /* ── SIDEBAR ── */
+  .sidebar-header {
+    padding: 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .sidebar-header h3 { font-size: 0.9rem; font-weight: 700; }
+  .sidebar-body { flex: 1; overflow-y: auto; padding: 12px; }
+  .sidebar-section { margin-bottom: 16px; }
+  .sidebar-section h4 {
+    font-size: 0.72rem; color: var(--text-muted);
+    text-transform: uppercase; letter-spacing: 0.08em;
+    margin-bottom: 8px; padding-bottom: 4px;
+    border-bottom: 1px solid var(--border);
+  }
+  .event-list-item {
+    padding: 8px 10px; border-radius: 8px; margin-bottom: 6px;
+    border: 1px solid var(--border);
+    display: flex; align-items: flex-start; gap: 8px;
+    cursor: pointer; transition: all 0.15s;
+    background: var(--surface);
+  }
+  .event-list-item:hover { box-shadow: var(--shadow); border-color: var(--accent); }
+  .event-list-item.done { opacity: 0.5; }
+  .event-item-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; margin-top: 5px; }
+  .event-item-body { flex: 1; min-width: 0; }
+  .event-item-title { font-size: 0.8rem; font-weight: 500; }
+  .event-item-meta { font-size: 0.7rem; color: var(--text-muted); margin-top: 2px; }
+  .done-check { width: 18px; height: 18px; border-radius: 50%; border: 1.5px solid var(--border); flex-shrink: 0; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+  .done-check.checked { background: var(--accent2); border-color: var(--accent2); color: #fff; }
+
+  /* ── BUTTONS ── */
+  .btn {
+    padding: 8px 16px; border-radius: 20px; border: none; cursor: pointer;
+    font-family: 'Noto Sans KR', sans-serif; font-size: 0.82rem; font-weight: 500;
+    transition: all 0.2s; letter-spacing: 0.02em;
+  }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover { background: #a8521f; }
+  .btn-secondary { background: var(--surface); border: 1px solid var(--border); color: var(--text); }
+  .btn-secondary:hover { background: var(--surface2); }
+  .btn-sm { padding: 5px 10px; font-size: 0.74rem; }
+  .btn-icon {
+    background: none; border: none; cursor: pointer; padding: 4px;
+    color: var(--text-muted); border-radius: 4px;
+    font-size: 0.9rem; transition: all 0.15s;
+  }
+  .btn-icon:hover { color: var(--accent); background: var(--accent-light); }
+
+  /* ── MODAL ── */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(44,36,22,0.5);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 1000; opacity: 0; pointer-events: none;
+    transition: opacity 0.2s;
+    backdrop-filter: blur(2px);
+  }
+  .modal-overlay.open { opacity: 1; pointer-events: all; }
+  .modal {
+    background: var(--surface); border-radius: 16px;
+    width: 480px; max-width: 95vw; max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: var(--shadow-lg);
+    transform: scale(0.95) translateY(10px);
+    transition: transform 0.2s;
+  }
+  .modal-overlay.open .modal { transform: scale(1) translateY(0); }
+  .modal-header {
+    padding: 20px 24px 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .modal-header h2 { font-family: 'DM Serif Display', serif; font-size: 1.3rem; }
+  .modal-body { padding: 20px 24px; }
+  .modal-footer { padding: 16px 24px; border-top: 1px solid var(--border); display: flex; gap: 8px; justify-content: flex-end; }
+  .form-group { margin-bottom: 14px; }
+  .form-group label { display: block; font-size: 0.78rem; font-weight: 500; color: var(--text-muted); margin-bottom: 5px; }
+  .form-control {
+    width: 100%; padding: 9px 12px;
+    border: 1.5px solid var(--border); border-radius: var(--radius-sm);
+    font-family: 'Noto Sans KR', sans-serif; font-size: 0.85rem;
+    background: var(--surface); color: var(--text);
+    transition: border-color 0.15s;
+    outline: none;
+  }
+  .form-control:focus { border-color: var(--accent); }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .form-check { display: flex; align-items: center; gap: 8px; }
+  .form-check input { accent-color: var(--accent); width: 16px; height: 16px; }
+  .category-select { display: flex; gap: 6px; flex-wrap: wrap; }
+  .cat-tag {
+    padding: 4px 12px; border-radius: 20px; font-size: 0.75rem;
+    cursor: pointer; border: 1.5px solid transparent;
+    transition: all 0.15s; font-family: 'Noto Sans KR', sans-serif;
+  }
+  .cat-tag.active { border-color: currentColor; font-weight: 600; }
+
+  /* ── EVENT DETAIL MODAL ── */
+  .detail-badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 3px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 500;
+    margin-bottom: 12px;
+  }
+  .detail-info { margin-top: 12px; }
+  .detail-info-row {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 8px 0; border-bottom: 1px solid var(--border);
+    font-size: 0.82rem;
+  }
+  .detail-info-row:last-child { border: none; }
+  .detail-info-label { color: var(--text-muted); width: 70px; flex-shrink: 0; }
+
+  /* ── HOLIDAY MANAGER ── */
+  .holiday-item {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 8px 10px; border-radius: 6px; background: var(--danger-light);
+    margin-bottom: 6px; font-size: 0.8rem;
+  }
+
+  /* ── MINI CALENDAR ── */
+  .mini-cal { padding: 12px; }
+  .mini-cal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+  .mini-cal-header span { font-size: 0.82rem; font-weight: 700; }
+  .mini-cal-nav { background: none; border: none; cursor: pointer; color: var(--text-muted); padding: 2px 6px; border-radius: 4px; }
+  .mini-cal-nav:hover { color: var(--accent); }
+  .mini-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px; }
+  .mini-wd { text-align: center; font-size: 0.62rem; color: var(--text-muted); padding: 3px 0; }
+  .mini-day {
+    text-align: center; font-size: 0.73rem; padding: 4px 0;
+    cursor: pointer; border-radius: 4px; transition: all 0.1s;
+  }
+  .mini-day:hover { background: var(--accent-light); }
+  .mini-day.today { background: var(--accent); color: #fff; border-radius: 50%; }
+  .mini-day.selected { background: var(--accent-light); color: var(--accent); font-weight: 700; }
+  .mini-day.other { color: #ccc; }
+  .mini-day.has-event::after {
+    content: '•'; display: block; font-size: 0.6rem;
+    color: var(--accent); line-height: 0.8; margin-top: -2px;
+  }
+
+  /* ── PROGRESS / ONGOING ── */
+  .ongoing-event {
+    padding: 10px; border-radius: 8px; background: var(--surface2);
+    border: 1px solid var(--border); margin-bottom: 8px;
+  }
+  .ongoing-title { font-size: 0.82rem; font-weight: 500; margin-bottom: 4px; }
+  .ongoing-meta { font-size: 0.7rem; color: var(--text-muted); margin-bottom: 8px; }
+  .progress-bar { height: 5px; background: var(--border); border-radius: 3px; overflow: hidden; margin-bottom: 8px; }
+  .progress-fill { height: 100%; border-radius: 3px; background: var(--accent2); transition: width 0.4s; }
+
+  /* ── SCROLLBAR ── */
+  ::-webkit-scrollbar { width: 5px; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 768px) {
+    .sidebar { display: none; }
+    .calendar-section { padding: 12px; }
+  }
+
+  .empty-msg { text-align: center; color: var(--text-muted); font-size: 0.82rem; padding: 20px; }
+  .dot-legend { display: flex; gap: 10px; flex-wrap: wrap; padding: 10px 12px; border-bottom: 1px solid var(--border); }
+  .dot-legend-item { display: flex; align-items: center; gap: 4px; font-size: 0.7rem; color: var(--text-muted); }
+  .dot { width: 8px; height: 8px; border-radius: 50%; }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="header-title">📚 선생님 <span>일정관리</span></div>
+  <div class="header-actions">
+    <button class="btn btn-secondary btn-sm" onclick="openHolidayManager()">🗓 휴일 설정</button>
+    <button class="btn btn-primary btn-sm" onclick="openAddEvent()">+ 일정 추가</button>
+  </div>
+</header>
+
+<!-- TABS -->
+<div class="tab-bar">
+  <button class="tab-btn active" onclick="switchView('month',this)">월별</button>
+  <button class="tab-btn" onclick="switchView('week',this)">주별</button>
+  <button class="tab-btn" onclick="switchView('day',this)">일별</button>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+  <div class="calendar-section" id="calSection">
+    <!-- rendered by JS -->
+  </div>
+  <div class="sidebar">
+    <!-- Mini Calendar -->
+    <div class="mini-cal" id="miniCal"></div>
+    <div class="dot-legend">
+      <div class="dot-legend-item"><div class="dot" style="background:var(--blue)"></div>일반</div>
+      <div class="dot-legend-item"><div class="dot" style="background:var(--accent)"></div>수업</div>
+      <div class="dot-legend-item"><div class="dot" style="background:var(--gold)"></div>회의</div>
+      <div class="dot-legend-item"><div class="dot" style="background:var(--danger)"></div>행사</div>
+      <div class="dot-legend-item"><div class="dot" style="background:var(--accent2)"></div>기타</div>
+    </div>
+    <!-- Today's Events -->
+    <div class="sidebar-body">
+      <div class="sidebar-section" id="ongoingSection">
+        <h4>진행 중인 일정</h4>
+        <div id="ongoingList"></div>
+      </div>
+      <div class="sidebar-section" id="selectedDaySection">
+        <h4 id="selectedDayTitle">선택한 날 일정</h4>
+        <div id="selectedDayList"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ADD EVENT MODAL -->
+<div class="modal-overlay" id="addModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>일정 추가</h2>
+      <button class="btn-icon" onclick="closeModal('addModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>제목</label>
+        <input class="form-control" id="evTitle" placeholder="일정 제목을 입력하세요" />
+      </div>
+      <div class="form-group">
+        <label>카테고리</label>
+        <div class="category-select" id="catSelect">
+          <button class="cat-tag active" data-cat="general" style="background:var(--blue-light);color:var(--blue)" onclick="selectCat(this)">일반</button>
+          <button class="cat-tag" data-cat="class" style="background:var(--accent-light);color:var(--accent)" onclick="selectCat(this)">수업</button>
+          <button class="cat-tag" data-cat="meeting" style="background:var(--gold-light);color:var(--gold)" onclick="selectCat(this)">회의</button>
+          <button class="cat-tag" data-cat="holiday-ev" style="background:var(--danger-light);color:var(--danger)" onclick="selectCat(this)">행사</button>
+          <button class="cat-tag" data-cat="other" style="background:var(--accent2-light);color:var(--accent2)" onclick="selectCat(this)">기타</button>
+        </div>
+      </div>
+      <div class="form-group">
+        <div class="form-check">
+          <input type="checkbox" id="allDayChk" checked onchange="toggleAllDay()" />
+          <label for="allDayChk">종일 일정</label>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>시작일</label>
+          <input type="date" class="form-control" id="evStart" />
+        </div>
+        <div class="form-group">
+          <label>종료일</label>
+          <input type="date" class="form-control" id="evEnd" />
+        </div>
+      </div>
+      <div class="form-row" id="timeRow" style="display:none">
+        <div class="form-group">
+          <label>시작 시간</label>
+          <input type="time" class="form-control" id="evStartTime" value="09:00" />
+        </div>
+        <div class="form-group">
+          <label>종료 시간</label>
+          <input type="time" class="form-control" id="evEndTime" value="10:00" />
+        </div>
+      </div>
+      <div class="form-group">
+        <label>메모</label>
+        <textarea class="form-control" id="evMemo" rows="2" placeholder="메모 (선택사항)"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('addModal')">취소</button>
+      <button class="btn btn-primary" onclick="saveEvent()">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- EVENT DETAIL MODAL -->
+<div class="modal-overlay" id="detailModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>일정 상세</h2>
+      <button class="btn-icon" onclick="closeModal('detailModal')">✕</button>
+    </div>
+    <div class="modal-body" id="detailBody"></div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('detailModal')">닫기</button>
+      <button class="btn btn-secondary" id="detailToggleBtn"></button>
+      <button class="btn" style="background:var(--danger);color:#fff" id="detailDeleteBtn">삭제</button>
+    </div>
+  </div>
+</div>
+
+<!-- HOLIDAY MANAGER MODAL -->
+<div class="modal-overlay" id="holidayModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>휴일 관리</h2>
+      <button class="btn-icon" onclick="closeModal('holidayModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:0.8rem;color:var(--text-muted);margin-bottom:14px">공휴일 및 학교 휴일을 직접 추가할 수 있습니다.</p>
+      <div class="form-row">
+        <div class="form-group">
+          <label>날짜</label>
+          <input type="date" class="form-control" id="hlDate" />
+        </div>
+        <div class="form-group">
+          <label>이름</label>
+          <input class="form-control" id="hlName" placeholder="예: 개교기념일" />
+        </div>
+      </div>
+      <button class="btn btn-primary btn-sm" onclick="addHoliday()" style="margin-bottom:14px">추가</button>
+      <div id="holidayList"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── STATE ──
+let view = 'month';
+let today = new Date();
+let cursor = new Date(today.getFullYear(), today.getMonth(), 1);
+let selectedDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+let editingEventId = null;
+let selectedCat = 'general';
+
+function loadData(key, def) {
+  try { return JSON.parse(localStorage.getItem(key)) ?? def; } catch { return def; }
+}
+function saveData(key, val) { localStorage.setItem(key, JSON.stringify(val)); }
+
+let events = loadData('tc_events', []);
+let holidays = loadData('tc_holidays', [
+  { date: '2025-01-01', name: '새해' },
+  { date: '2025-03-01', name: '삼일절' },
+  { date: '2025-05-05', name: '어린이날' },
+  { date: '2025-06-06', name: '현충일' },
+  { date: '2025-08-15', name: '광복절' },
+  { date: '2025-10-03', name: '개천절' },
+  { date: '2025-10-09', name: '한글날' },
+  { date: '2025-12-25', name: '크리스마스' },
+  { date: '2026-01-01', name: '새해' },
+  { date: '2026-03-01', name: '삼일절' },
+  { date: '2026-05-05', name: '어린이날' },
+  { date: '2026-06-06', name: '현충일' },
+  { date: '2026-08-15', name: '광복절' },
+  { date: '2026-10-03', name: '개천절' },
+  { date: '2026-10-09', name: '한글날' },
+  { date: '2026-12-25', name: '크리스마스' },
+]);
+
+const catColors = {
+  general: { bg: 'var(--blue-light)', color: 'var(--blue)', dot: '#2f5597' },
+  class:   { bg: 'var(--accent-light)', color: 'var(--accent)', dot: '#c4622d' },
+  meeting: { bg: 'var(--gold-light)', color: 'var(--gold)', dot: '#b8860b' },
+  'holiday-ev': { bg: 'var(--danger-light)', color: 'var(--danger)', dot: '#a83240' },
+  other:   { bg: 'var(--accent2-light)', color: 'var(--accent2)', dot: '#3a6b52' },
+};
+
+// ── UTILS ──
+function fmtDate(d) {
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+function parseDate(s) { const [y,m,d] = s.split('-').map(Number); return new Date(y,m-1,d); }
+function isToday(d) { return fmtDate(d) === fmtDate(today); }
+function isSameDay(a, b) { return fmtDate(a) === fmtDate(b); }
+
+function getHoliday(dateStr) {
+  return holidays.find(h => h.date === dateStr);
+}
+
+function getEventsForDate(dateStr) {
+  return events.filter(ev => {
+    if (ev.start <= dateStr && ev.end >= dateStr) return true;
+    return false;
+  });
+}
+
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2); }
+
+// ── SWITCH VIEW ──
+function switchView(v, btn) {
+  view = v;
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  render();
+}
+
+function render() {
+  renderCalendar();
+  renderMiniCal();
+  renderSidebar();
+}
+
+// ── MONTH VIEW ──
+function renderMonthView() {
+  const y = cursor.getFullYear(), m = cursor.getMonth();
+  const firstDay = new Date(y, m, 1);
+  const lastDay = new Date(y, m+1, 0);
+  let startDow = firstDay.getDay(); // 0=Sun
+  const WDAYS = ['일','월','화','수','목','금','토'];
+
+  let html = `<div class="nav-bar">
+    <button class="nav-btn" onclick="navPrev()">‹</button>
+    <div style="display:flex;align-items:center;gap:12px">
+      <h2>${y}년 ${m+1}월</h2>
+      <button class="today-btn" onclick="goToday()">오늘</button>
+    </div>
+    <button class="nav-btn" onclick="navNext()">›</button>
+  </div>
+  <div class="month-grid">
+    <div class="weekday-header">${WDAYS.map(w=>`<div>${w}</div>`).join('')}</div>
+    <div class="days-grid">`;
+
+  // prev month padding
+  const prevLast = new Date(y, m, 0);
+  for (let i = startDow - 1; i >= 0; i--) {
+    const d = new Date(y, m-1, prevLast.getDate()-i);
+    html += renderDayCell(d, true);
+  }
+  for (let d = 1; d <= lastDay.getDate(); d++) {
+    html += renderDayCell(new Date(y, m, d), false);
+  }
+  // fill rest
+  const totalCells = Math.ceil((startDow + lastDay.getDate()) / 7) * 7;
+  for (let d = 1; d <= totalCells - startDow - lastDay.getDate(); d++) {
+    html += renderDayCell(new Date(y, m+1, d), true);
+  }
+
+  html += `</div></div>`;
+  return html;
+}
+
+function renderDayCell(d, otherMonth) {
+  const ds = fmtDate(d);
+  const hol = getHoliday(ds);
+  const dayEvs = getEventsForDate(ds);
+  const isSelected = fmtDate(d) === fmtDate(selectedDate);
+  let cls = 'day-cell';
+  if (otherMonth) cls += ' other-month';
+  if (isToday(d)) cls += ' today';
+  if (isSelected && !otherMonth) cls += ' selected';
+  if (hol) cls += ' holiday';
+
+  let inner = `<div class="day-num">${d.getDate()}</div>`;
+  if (hol) inner += `<div class="holiday-label">🎌 ${hol.name}</div>`;
+
+  const visibleEvs = dayEvs.slice(0, 3);
+  const moreCount = dayEvs.length - visibleEvs.length;
+  visibleEvs.forEach(ev => {
+    const doneCls = ev.done ? ' done' : '';
+    inner += `<div class="event-chip cat-${ev.category}${doneCls}" onclick="event.stopPropagation();showDetail('${ev.id}')" title="${ev.title}">${ev.title}</div>`;
+  });
+  if (moreCount > 0) inner += `<div class="more-chip">+${moreCount}개 더</div>`;
+
+  return `<div class="${cls}" onclick="selectDay('${ds}')" ondblclick="openAddEventOnDate('${ds}')">${inner}</div>`;
+}
+
+// ── WEEK VIEW ──
+function renderWeekView() {
+  const dow = selectedDate.getDay();
+  const weekStart = new Date(selectedDate);
+  weekStart.setDate(selectedDate.getDate() - dow);
+
+  const days = [];
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(weekStart);
+    d.setDate(weekStart.getDate() + i);
+    days.push(d);
+  }
+
+  const WDAYS = ['일','월','화','수','목','금','토'];
+  const weekLabel = `${days[0].getMonth()+1}/${days[0].getDate()} – ${days[6].getMonth()+1}/${days[6].getDate()}`;
+
+  let html = `<div class="nav-bar">
+    <button class="nav-btn" onclick="navPrev()">‹</button>
+    <div style="display:flex;align-items:center;gap:12px">
+      <h2 style="font-size:1.1rem">${cursor.getFullYear()}년 ${weekLabel}</h2>
+      <button class="today-btn" onclick="goToday()">오늘</button>
+    </div>
+    <button class="nav-btn" onclick="navNext()">›</button>
+  </div>
+  <div class="week-view">
+    <div class="week-header">
+      <div></div>`;
+
+  days.forEach((d, i) => {
+    const isTd = isToday(d);
+    const ds = fmtDate(d);
+    const hol = getHoliday(ds);
+    html += `<div onclick="selectDay('${ds}')" style="cursor:pointer">
+      <span style="font-size:0.72rem;color:${i===0?'#f28b82':i===6?'#93c5fd':'rgba(255,255,255,0.7)'}">${WDAYS[i]}</span>
+      <span class="wh-day${isTd?' today-wd':''}">${d.getDate()}</span>
+      ${hol?`<span style="font-size:0.6rem;color:#f28b82">${hol.name}</span>`:''}
+    </div>`;
+  });
+  html += `</div><div class="week-body"><div class="time-col">`;
+
+  const hours = [];
+  for (let h = 0; h < 24; h++) hours.push(h);
+  hours.forEach(h => {
+    html += `<div class="time-slot">${h.toString().padStart(2,'0')}:00</div>`;
+  });
+  html += `</div>`;
+
+  days.forEach(d => {
+    const ds = fmtDate(d);
+    const dayEvs = getEventsForDate(ds).filter(ev => !ev.allDay);
+    html += `<div class="week-day-col">`;
+    hours.forEach(h => {
+      const slotEvs = dayEvs.filter(ev => {
+        const sh = parseInt((ev.startTime||'00:00').split(':')[0]);
+        return sh === h;
+      });
+      html += `<div class="week-slot" onclick="openAddEventOnDate('${ds}')">`;
+      slotEvs.forEach(ev => {
+        const c = catColors[ev.category];
+        html += `<div class="week-event" style="background:${c.bg};color:${c.color}" onclick="event.stopPropagation();showDetail('${ev.id}')">${ev.title}</div>`;
+      });
+      html += `</div>`;
+    });
+    html += `</div>`;
+  });
+
+  html += `</div></div>`;
+  return html;
+}
+
+// ── DAY VIEW ──
+function renderDayView() {
+  const ds = fmtDate(selectedDate);
+  const hol = getHoliday(ds);
+  const dayEvs = getEventsForDate(ds);
+  const allDayEvs = dayEvs.filter(ev => ev.allDay);
+  const timedEvs = dayEvs.filter(ev => !ev.allDay);
+
+  const WDAY = ['일','월','화','수','목','금','토'][selectedDate.getDay()];
+  const dateLabel = `${selectedDate.getFullYear()}년 ${selectedDate.getMonth()+1}월 ${selectedDate.getDate()}일 (${WDAY})`;
+
+  let html = `<div class="nav-bar">
+    <button class="nav-btn" onclick="navPrev()">‹</button>
+    <div style="display:flex;align-items:center;gap:12px">
+      <h2 style="font-size:1rem">${dateLabel}</h2>
+      <button class="today-btn" onclick="goToday()">오늘</button>
+    </div>
+    <button class="nav-btn" onclick="navNext()">›</button>
+  </div>
+  <div class="day-view">
+    <div class="day-view-header">
+      <h3>${dateLabel}</h3>
+      <p>${hol ? '🎌 ' + hol.name : isToday(selectedDate) ? '오늘' : ''}</p>
+    </div>`;
+
+  if (allDayEvs.length > 0) {
+    html += `<div class="all-day-section"><h4>종일 일정</h4>`;
+    allDayEvs.forEach(ev => {
+      const c = catColors[ev.category];
+      html += `<div class="day-event" style="background:${c.bg};color:${c.color};${ev.done?'opacity:0.45;text-decoration:line-through':''}" onclick="showDetail('${ev.id}')">
+        <div class="day-event-info"><div class="day-event-title">${ev.title}</div></div>
+      </div>`;
+    });
+    html += `</div>`;
+  }
+
+  html += `<div class="day-timeline">`;
+  for (let h = 0; h < 24; h++) {
+    const slotEvs = timedEvs.filter(ev => {
+      const sh = parseInt((ev.startTime||'00:00').split(':')[0]);
+      return sh === h;
+    });
+    html += `<div class="day-time-row">
+      <div class="day-time-label">${h.toString().padStart(2,'0')}:00</div>
+      <div class="day-slot" onclick="openAddEventOnDate('${ds}')">`;
+    slotEvs.forEach(ev => {
+      const c = catColors[ev.category];
+      html += `<div class="day-event" style="background:${c.bg};color:${c.color};${ev.done?'opacity:0.45;text-decoration:line-through':''}" onclick="event.stopPropagation();showDetail('${ev.id}')">
+        <div class="day-event-info">
+          <div class="day-event-title">${ev.title}</div>
+          <div class="day-event-time">${ev.startTime||''} ~ ${ev.endTime||''}</div>
+        </div>
+      </div>`;
+    });
+    html += `</div></div>`;
+  }
+  html += `</div></div>`;
+  return html;
+}
+
+// ── RENDER CALENDAR ──
+function renderCalendar() {
+  const sec = document.getElementById('calSection');
+  if (view === 'month') sec.innerHTML = renderMonthView();
+  else if (view === 'week') sec.innerHTML = renderWeekView();
+  else sec.innerHTML = renderDayView();
+}
+
+// ── MINI CAL ──
+function renderMiniCal() {
+  const y = cursor.getFullYear(), m = cursor.getMonth();
+  const firstDay = new Date(y, m, 1);
+  const lastDay = new Date(y, m+1, 0);
+  let startDow = firstDay.getDay();
+  const WDAYS = ['일','월','화','수','목','금','토'];
+
+  let html = `<div class="mini-cal-header">
+    <button class="mini-cal-nav" onclick="navPrev()">‹</button>
+    <span>${y}.${String(m+1).padStart(2,'0')}</span>
+    <button class="mini-cal-nav" onclick="navNext()">›</button>
+  </div>
+  <div class="mini-grid">
+    ${WDAYS.map(w=>`<div class="mini-wd">${w}</div>`).join('')}`;
+
+  const prevLast = new Date(y, m, 0);
+  for (let i = startDow - 1; i >= 0; i--) {
+    const d = new Date(y, m-1, prevLast.getDate()-i);
+    html += `<div class="mini-day other">${d.getDate()}</div>`;
+  }
+  for (let d = 1; d <= lastDay.getDate(); d++) {
+    const dd = new Date(y, m, d);
+    const ds = fmtDate(dd);
+    const isTd = isToday(dd);
+    const isSel = fmtDate(dd) === fmtDate(selectedDate);
+    const hasEv = getEventsForDate(ds).length > 0;
+    let cls = 'mini-day';
+    if (isTd) cls += ' today';
+    else if (isSel) cls += ' selected';
+    if (hasEv && !isTd) cls += ' has-event';
+    html += `<div class="${cls}" onclick="selectDay('${ds}')">${d}</div>`;
+  }
+
+  html += `</div>`;
+  document.getElementById('miniCal').innerHTML = html;
+}
+
+// ── SIDEBAR ──
+function renderSidebar() {
+  renderOngoing();
+  renderSelectedDay();
+}
+
+function renderOngoing() {
+  const now = fmtDate(today);
+  const ongoing = events.filter(ev => ev.start < now && ev.end >= now && !ev.allDay === false || (ev.start <= now && ev.end > now));
+  const multiDay = events.filter(ev => ev.start < now && ev.end >= now && ev.start !== ev.end);
+  const container = document.getElementById('ongoingList');
+  if (multiDay.length === 0) { container.innerHTML = '<div class="empty-msg">진행 중인 연속 일정 없음</div>'; return; }
+
+  container.innerHTML = multiDay.map(ev => {
+    const c = catColors[ev.category];
+    const startD = parseDate(ev.start);
+    const endD = parseDate(ev.end);
+    const total = (endD - startD) / 86400000 + 1;
+    const elapsed = (parseDate(now) - startD) / 86400000 + 1;
+    const pct = Math.min(100, Math.round(elapsed / total * 100));
+    return `<div class="ongoing-event">
+      <div class="ongoing-title" style="color:${c.color}">${ev.title}</div>
+      <div class="ongoing-meta">${ev.start} ~ ${ev.end} (${elapsed}/${total}일)</div>
+      <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <span style="font-size:0.7rem;color:var(--text-muted)">${pct}% 진행</span>
+        <button class="btn btn-sm ${ev.done?'btn-secondary':'btn-primary'}" style="font-size:0.7rem;padding:3px 8px" onclick="toggleDone('${ev.id}')">
+          ${ev.done ? '✓ 완료됨' : '완료로 표시'}
+        </button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderSelectedDay() {
+  const ds = fmtDate(selectedDate);
+  const evs = getEventsForDate(ds);
+  const WDAY = ['일','월','화','수','목','금','토'][selectedDate.getDay()];
+  document.getElementById('selectedDayTitle').textContent = `${selectedDate.getMonth()+1}/${selectedDate.getDate()}(${WDAY}) 일정`;
+
+  const container = document.getElementById('selectedDayList');
+  if (evs.length === 0) { container.innerHTML = '<div class="empty-msg">일정 없음</div>'; return; }
+
+  container.innerHTML = evs.map(ev => {
+    const c = catColors[ev.category];
+    return `<div class="event-list-item ${ev.done?'done':''}" onclick="showDetail('${ev.id}')">
+      <div class="event-item-dot" style="background:${c.dot}"></div>
+      <div class="event-item-body">
+        <div class="event-item-title">${ev.title}</div>
+        <div class="event-item-meta">${ev.allDay ? '종일' : (ev.startTime + ' ~ ' + ev.endTime)}</div>
+      </div>
+      <div class="done-check ${ev.done?'checked':''}" onclick="event.stopPropagation();toggleDone('${ev.id}')" title="완료 토글">
+        ${ev.done ? '✓' : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── NAV ──
+function navPrev() {
+  if (view === 'month') cursor.setMonth(cursor.getMonth()-1);
+  else if (view === 'week') { selectedDate.setDate(selectedDate.getDate()-7); cursor = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1); }
+  else { selectedDate.setDate(selectedDate.getDate()-1); cursor = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1); }
+  render();
+}
+function navNext() {
+  if (view === 'month') cursor.setMonth(cursor.getMonth()+1);
+  else if (view === 'week') { selectedDate.setDate(selectedDate.getDate()+7); cursor = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1); }
+  else { selectedDate.setDate(selectedDate.getDate()+1); cursor = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1); }
+  render();
+}
+function goToday() {
+  selectedDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  cursor = new Date(today.getFullYear(), today.getMonth(), 1);
+  render();
+}
+function selectDay(ds) {
+  selectedDate = parseDate(ds);
+  cursor = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1);
+  render();
+}
+
+// ── ADD EVENT ──
+function openAddEvent() {
+  editingEventId = null;
+  document.getElementById('evTitle').value = '';
+  document.getElementById('evMemo').value = '';
+  document.getElementById('allDayChk').checked = true;
+  toggleAllDay();
+  const ds = fmtDate(selectedDate);
+  document.getElementById('evStart').value = ds;
+  document.getElementById('evEnd').value = ds;
+  selectedCat = 'general';
+  document.querySelectorAll('.cat-tag').forEach(t => t.classList.remove('active'));
+  document.querySelector('.cat-tag[data-cat="general"]').classList.add('active');
+  openModal('addModal');
+}
+function openAddEventOnDate(ds) {
+  openAddEvent();
+  document.getElementById('evStart').value = ds;
+  document.getElementById('evEnd').value = ds;
+}
+
+function selectCat(btn) {
+  document.querySelectorAll('.cat-tag').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  selectedCat = btn.dataset.cat;
+}
+
+function toggleAllDay() {
+  const allDay = document.getElementById('allDayChk').checked;
+  document.getElementById('timeRow').style.display = allDay ? 'none' : 'grid';
+}
+
+function saveEvent() {
+  const title = document.getElementById('evTitle').value.trim();
+  if (!title) { alert('제목을 입력해주세요.'); return; }
+  const allDay = document.getElementById('allDayChk').checked;
+  const start = document.getElementById('evStart').value;
+  const end = document.getElementById('evEnd').value || start;
+  if (!start) { alert('시작일을 선택해주세요.'); return; }
+
+  const ev = {
+    id: editingEventId || uid(),
+    title,
+    category: selectedCat,
+    allDay,
+    start,
+    end: end >= start ? end : start,
+    startTime: allDay ? null : document.getElementById('evStartTime').value,
+    endTime: allDay ? null : document.getElementById('evEndTime').value,
+    memo: document.getElementById('evMemo').value.trim(),
+    done: false,
+    createdAt: Date.now()
+  };
+
+  if (editingEventId) {
+    const idx = events.findIndex(e => e.id === editingEventId);
+    if (idx >= 0) { ev.done = events[idx].done; events[idx] = ev; }
+  } else {
+    events.push(ev);
+  }
+
+  saveData('tc_events', events);
+  closeModal('addModal');
+  render();
+}
+
+// ── DETAIL ──
+function showDetail(id) {
+  const ev = events.find(e => e.id === id);
+  if (!ev) return;
+  const c = catColors[ev.category];
+  const catLabel = {general:'일반',class:'수업',meeting:'회의','holiday-ev':'행사',other:'기타'}[ev.category];
+  const timeStr = ev.allDay ? '종일' : `${ev.startTime} ~ ${ev.endTime}`;
+  const dateStr = ev.start === ev.end ? ev.start : `${ev.start} ~ ${ev.end}`;
+
+  document.getElementById('detailBody').innerHTML = `
+    <div class="detail-badge" style="background:${c.bg};color:${c.color}">
+      <div class="dot" style="background:${c.dot};width:8px;height:8px;border-radius:50%"></div>
+      ${catLabel}
+    </div>
+    <h2 style="font-size:1.2rem;font-family:'DM Serif Display',serif;${ev.done?'text-decoration:line-through;opacity:0.6':''}">${ev.title}</h2>
+    <div class="detail-info">
+      <div class="detail-info-row">
+        <span class="detail-info-label">날짜</span>
+        <span>${dateStr}</span>
+      </div>
+      <div class="detail-info-row">
+        <span class="detail-info-label">시간</span>
+        <span>${timeStr}</span>
+      </div>
+      <div class="detail-info-row">
+        <span class="detail-info-label">상태</span>
+        <span style="color:${ev.done?'var(--accent2)':'var(--text-muted)'}">${ev.done ? '✅ 완료됨' : '⏳ 진행 예정'}</span>
+      </div>
+      ${ev.memo ? `<div class="detail-info-row">
+        <span class="detail-info-label">메모</span>
+        <span style="white-space:pre-wrap">${ev.memo}</span>
+      </div>` : ''}
+    </div>`;
+
+  document.getElementById('detailToggleBtn').textContent = ev.done ? '미완료로 변경' : '✓ 완료로 표시';
+  document.getElementById('detailToggleBtn').onclick = () => { toggleDone(id); closeModal('detailModal'); };
+  document.getElementById('detailDeleteBtn').onclick = () => { deleteEvent(id); };
+  openModal('detailModal');
+}
+
+function deleteEvent(id) {
+  if (!confirm('이 일정을 삭제하시겠습니까?')) return;
+  events = events.filter(e => e.id !== id);
+  saveData('tc_events', events);
+  closeModal('detailModal');
+  render();
+}
+
+function toggleDone(id) {
+  const ev = events.find(e => e.id === id);
+  if (!ev) return;
+  ev.done = !ev.done;
+  saveData('tc_events', events);
+  render();
+}
+
+// ── HOLIDAY MANAGER ──
+function openHolidayManager() {
+  renderHolidayList();
+  openModal('holidayModal');
+}
+
+function renderHolidayList() {
+  const sorted = [...holidays].sort((a,b) => a.date.localeCompare(b.date));
+  document.getElementById('holidayList').innerHTML = sorted.map(h => `
+    <div class="holiday-item">
+      <span><strong>${h.date}</strong> · ${h.name}</span>
+      <button class="btn-icon" onclick="removeHoliday('${h.date}')" style="color:var(--danger)">✕</button>
+    </div>`).join('') || '<div class="empty-msg">등록된 휴일 없음</div>';
+}
+
+function addHoliday() {
+  const date = document.getElementById('hlDate').value;
+  const name = document.getElementById('hlName').value.trim();
+  if (!date || !name) { alert('날짜와 이름을 입력해주세요.'); return; }
+  if (holidays.find(h => h.date === date)) { alert('이미 등록된 날짜입니다.'); return; }
+  holidays.push({ date, name });
+  saveData('tc_holidays', holidays);
+  document.getElementById('hlDate').value = '';
+  document.getElementById('hlName').value = '';
+  renderHolidayList();
+  render();
+}
+
+function removeHoliday(date) {
+  holidays = holidays.filter(h => h.date !== date);
+  saveData('tc_holidays', holidays);
+  renderHolidayList();
+  render();
+}
+
+// ── MODAL HELPERS ──
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+document.querySelectorAll('.modal-overlay').forEach(m => {
+  m.addEventListener('click', e => { if (e.target === m) m.classList.remove('open'); });
+});
+
+// ── INIT ──
+render();
+</script>
+</body>
+</html>
